@@ -1,0 +1,3 @@
+# Ignore artifacts that may contain sensitive data
+**/artifacts/*
+!**/artifacts/README.md

