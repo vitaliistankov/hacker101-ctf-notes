@@ -1,9 +1,35 @@
 # Micro-CMS v1
 
 ## Summary
-**Source:** Hacker101 CTF  
-**Category:** Web / HTML sanitization / Page creation  
+**Source:** Hacker101 CTF
+**Category:** Web / HTML sanitization / Page creation
+**Total Flags:** 4 (Flag0, Flag1, Flag2, Flag3)
 **Points:** ?
+
+---
+
+## Hints Summary
+
+### Flag0 - Page Discovery
+- Try creating a new page
+- How are pages indexed?
+- Look at the sequence of IDs
+- If the front door doesn't open, try the window
+- In what ways can you retrieve page contents?
+
+### Flag1 - Input Validation
+- Make sure you tamper with every input
+- Have you tested for the usual culprits? XSS, SQL injection, path injection
+- Bugs often occur when an input should always be one type and turns out to be another
+- Remember, form submissions aren't the only inputs that come from browsers
+
+### Flag2 - Indirect XSS
+- Sometimes a given input will affect more than one page
+- The bug you are looking for doesn't exist in the most obvious place this input is shown
+
+### Flag3 - Non-Script HTML
+- Script tags are great, but what other options do you have?
+- You have all the hints for this level.
 
 ---
 
@@ -47,8 +73,24 @@ fetch('/page/edit/2', {
 
 ---
 
-## Flag
-(paste flag here if desired)
+## Flags Captured
+
+### Flag0 - Page Discovery
+**Status:** Not found
+**Flag:**
+
+### Flag1 - Input Validation
+**Status:** Not found
+**Flag:**
+
+### Flag2 - Indirect XSS
+**Status:** Not found
+**Flag:**
+
+### Flag3 - Non-Script HTML (Markdown Links/Images)
+**Status:** Found
+**Flag:** (paste flag here)
+**Method:** Used markdown link/image syntax to access `/flag` endpoint
 
 ---
 
